@@ -2,7 +2,7 @@ import streamlit as st
 
 def main():
     st.header("Page Purpose & Description")
-    st.markdown("**shock cal**: Calculate shock result")
+    st.markdown("**shock cal**: Calculate shock response result (SRS, Pseudo Velocity)")
     # st.markdown("**concate**: Concate Predict & Real Data")
     # st.markdown("**regression**: Regression tool with linear & taguchi method")
     # st.markdown("**predict**: Predict result with load trained model")
