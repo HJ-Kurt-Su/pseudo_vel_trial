@@ -4,13 +4,26 @@ import plotly.express as px
 import datetime as dt
 import numpy as np
 import endaq
-import datetime
+import io
+
+
 
 
 @st.cache_data
 def convert_df(df):
     # IMPORTANT: Cache the conversion to prevent computation on every rerun
     return df.to_csv(index=False).encode('utf-8')
+
+
+def convert_fig(fig):
+
+    mybuff = io.StringIO()
+   
+    # fig_html = fig_pair.write_html(fig_file_name)
+    fig.write_html(mybuff, include_plotlyjs='cdn')
+    html_bytes = mybuff.getvalue().encode()
+
+    return html_bytes
 
 def main():
 
@@ -41,7 +54,7 @@ def main():
         df_accel = pd.read_csv(uploaded_csv, encoding="utf-8")
    
     df_accel
-    date = str(datetime.datetime.now()).split(" ")[0]
+    date = str(dt.datetime.now()).split(" ")[0]
 
     df_accel = df_accel.set_index(df_accel.columns[0])
     # df_accel
@@ -49,14 +62,14 @@ def main():
     chl_list = df_accel.columns
     default_chl = chl_list[0]
     sel_chl = st.multiselect(
-        "### Choose channel for figure", 
+        "**Choose channel for figure:**", 
         chl_list, default=default_chl
     )
 
     df_accel_chl = df_accel[sel_chl]
 
     g_unit = st.radio(
-        "What's acceleration unit:",
+        "**What's acceleration unit:**",
         ["G", "m/s^2", "inch/s^2"],
         # captions = ["Laugh out loud.", "Get the popcorn.", "Never stop learning."]
         )
@@ -64,7 +77,7 @@ def main():
     # if g_unit == "G":
     #     pv_unit = ""
     
-    damping = st.number_input('Damping Ratio', min_value=0.01, value=0.05, step=0.01)
+    damping = st.number_input('**Damping Ratio:**', min_value=0.01, value=0.05, step=0.01)
 
 
     cal_srs = st.checkbox("Calculate SRS", value=True)
@@ -102,14 +115,28 @@ def main():
                         )
         # fig_srs.update_yaxes(title_font_family="Arial")
         
-        fig_srs
+        st.plotly_chart(fig_srs, use_container_width=True)
 
         srs_fil = convert_df(df_accel_srs)
         fil_file_name_csv = date + "_srs.csv"
+
         st.download_button(label='Download pvss result as CSV',  
-        data=srs_fil, 
-        file_name=fil_file_name_csv,
-        mime='text/csv')
+                            data=srs_fil, 
+                            file_name=fil_file_name_csv,
+                            mime='text/csv'
+                            )
+
+
+        fig_srs_name = date + "_srs.html"
+        # fig_html = fig_pair.write_html(fig_file_name)
+        srs_html = convert_fig(fig_srs)
+
+        st.download_button(label="Download SRS figure",
+                            data=srs_html,
+                            file_name=fig_srs_name,
+                            mime='text/html'
+                            )
+        
 
     # df_accel_psd = endaq.calc.psd.welch(df_accel, bin_width=1/11)
     # df_accel_vc = endaq.calc.psd.vc_curves(df_accel_psd, fstart=1, octave_bins=3)
@@ -159,14 +186,27 @@ def main():
                         },
                         )
         
-        fig_pvss
+        st.plotly_chart(fig_pvss, use_container_width=True)
 
         pvss_fil = convert_df(df_accel_pvss)
         fil_file_name_csv = date + "_pvss.csv"
+
         st.download_button(label='Download pvss result as CSV',  
-        data=pvss_fil, 
-        file_name=fil_file_name_csv,
-        mime='text/csv')
+                            data=pvss_fil, 
+                            file_name=fil_file_name_csv,
+                            mime='text/csv',
+                            key="srs")
+        
+        fig_pvss_name = date + "_pvss.html"
+        # fig_html = fig_pair.write_html(fig_file_name)
+        pvss_html = convert_fig(fig_pvss)
+
+        st.download_button(label="Download PVSS figure",
+                            data=pvss_html,
+                            file_name=fig_pvss_name,
+                            mime='text/html',
+                            key="pvss"
+                            )
 
         
 
