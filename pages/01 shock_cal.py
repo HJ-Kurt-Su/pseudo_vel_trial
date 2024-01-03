@@ -32,17 +32,44 @@ def main():
     st.markdown("               ")
     st.markdown("               ")
 
+
+    st.markdown("--------")
+    st.markdown("## Under Construction, Please Ignore")
+    input_method = st.selectbox("Select Input Profile:", 
+                             ["CSV Input", "Ideal Wave"]
+                             )
+    
+    if input_method == "Ideal Wave":
+
+        wave_type = st.selectbox("Select Ideal Wave Type:", 
+                                ["Half-Sine", "Square"]
+                                )
+        
+        wave_para = st.radio(
+            "**Select Input Parameter:**",
+            ["G & Duration", "DeltaV & Duration"],
+            # captions = ["Laugh out loud.", "Get the popcorn.", "Never stop learning."]
+            )
+        
+        if wave_para == "G & Duration":
+            g_lv = st.number_input("Please Input G Level (Unit: G)", min_value=0.1, value=30.0)
+            # duration = st.number_input("Please Input Duration (Unit:ms)", min_value=0.1, value=5)
+        
+        if wave_para == "DeltaV & Duration":
+            del_v = st.number_input("Please Input Delta V (Unit: in/s)", min_value=0.1, value=30.0)
+        
+        duration = st.number_input("Please Input Duration (Unit: ms)", min_value=0.1, value=5.0)
+        del_t = st.number_input("Please Input Delta T (Unit: ms)", min_value=0.01, value=0.02)
+
+        df_id_wv = pd.DataFrame()
+        time_series = np.arange(0, 1.2*duration, del_t)
+        df_id_wv["Time"] = time_series
+        # time_series
+        # df_id_wv
+
+    st.markdown("--------")
+
     uploaded_csv = st.sidebar.file_uploader('#### 選擇您要上傳的 CSV 檔', type="csv")
-    # uploaded_xl = st.sidebar.file_uploader('#### 選擇您要上傳的 Excel 檔', type="xlsx")
-
-    # calulate month can be UI adjust, 3 means total arrange month (real + predict)
-    # cal_mon = st.number_input("How Many Month To Calculate", min_value=1, max_value=10, value=3, step=1)
-
-    # # real predict switch can be UI adjust, 1 means only 1 real month data, rest is predict
-    # real_pred_swch = st.number_input("How Many Real Month", min_value=0, max_value=4, value=1, step=1)
-
-    # # pred_mon = st.text_input("Please Provide Predict Month: ", "Y23 Aug")
-    # pred_mon = st.text_input("Please Provide Predict Month: ", "Y23 Aug")
     
     if uploaded_csv is not None:
         df_accel = pd.read_csv(uploaded_csv, encoding="utf-8")
