@@ -63,8 +63,16 @@ def main():
 
         df_id_wv = pd.DataFrame()
         time_series = np.arange(0, 1.2*duration, del_t)
-        df_id_wv["Time"] = time_series
+        freq = 1000/(2*duration)
+        df_id_wv["Time"] = time_series/1000
+
+        if wave_type == "Half-Sine":
+       
+            df_id_wv["G"] = g_lv*np.sin(2 * np.pi * freq * df_id_wv["Time"])
+            df_id_wv.loc[df_id_wv["Time"] > duration/1000, "G"] = 0
+            # df_id_wv["Time"] = df_id_wv["Time"]/100
         # time_series
+        
         # df_id_wv
 
     st.markdown("--------")
@@ -76,11 +84,20 @@ def main():
         st.header('您所上傳的 csv 檔內容：')
 
     else:
-        st.header('未上傳檔案，以下為 Demo：')
-        uploaded_csv = "motorcycle-crash.csv"
-        df_accel = pd.read_csv(uploaded_csv, encoding="utf-8")
-   
+        if input_method == "Ideal Wave":
+            st.header('Ideal Wave')
+            df_accel = df_id_wv.copy()
+        else:
+            st.header('未上傳檔案，以下為 Demo：')
+            uploaded_csv = "motorcycle-crash.csv"
+            df_accel = pd.read_csv(uploaded_csv, encoding="utf-8")
+    
+
+
     df_accel
+
+
+
     date = str(dt.datetime.now()).split(" ")[0]
 
     df_accel = df_accel.set_index(df_accel.columns[0])
@@ -109,6 +126,17 @@ def main():
 
     cal_srs = st.checkbox("Calculate SRS", value=True)
     cal_pvss = st.checkbox("Calculate Pseduo Velocity")
+
+    fig_raw = px.line(df_accel, x=df_accel.index, y=sel_chl,
+                # log_x=True, log_y=True,
+                labels={
+                    "value": g_unit
+                },
+                # range_x=[1, 1000], range_y=[1, 1000]
+                )
+# fig_srs.update_yaxes(title_font_family="Arial")
+
+    st.plotly_chart(fig_raw, use_container_width=True)
 
 
     if cal_srs == True:
