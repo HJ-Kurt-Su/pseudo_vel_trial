@@ -32,14 +32,11 @@ def main():
     st.markdown("               ")
     st.markdown("               ")
 
-
-    st.markdown("--------")
-    st.markdown("## Under Construction, Please Ignore")
     input_method = st.selectbox("Select Input Profile:", 
-                             ["CSV Input", "Ideal Wave"]
+                             ["User CSV Input", "Ideal Wave Profile"]
                              )
     
-    if input_method == "Ideal Wave":
+    if input_method == "Ideal Wave Profile":
 
         wave_type = st.selectbox("Select Ideal Wave Type:", 
                                 ["Half-Sine", "Square"]
@@ -47,35 +44,51 @@ def main():
         
         wave_para = st.radio(
             "**Select Input Parameter:**",
-            ["G & Duration", "DeltaV & Duration"],
+            ["Duration & G", "DeltaV & G"],
             # captions = ["Laugh out loud.", "Get the popcorn.", "Never stop learning."]
             )
         
-        if wave_para == "G & Duration":
-            g_lv = st.number_input("Please Input G Level (Unit: G)", min_value=0.1, value=30.0)
-            # duration = st.number_input("Please Input Duration (Unit:ms)", min_value=0.1, value=5)
+        if wave_para == "Duration & G":
+            # g_lv = st.number_input("Please Input G Level (Unit: G)", min_value=0.1, value=30.0)
+            duration = st.number_input("Please Input Duration (Unit: ms)", min_value=0.1, value=5.0)
+            duration = duration/1000
         
-        if wave_para == "DeltaV & Duration":
+        if wave_para == "DeltaV & G":
             del_v = st.number_input("Please Input Delta V (Unit: in/s)", min_value=0.1, value=30.0)
         
-        duration = st.number_input("Please Input Duration (Unit: ms)", min_value=0.1, value=5.0)
-        del_t = st.number_input("Please Input Delta T (Unit: ms)", min_value=0.01, value=0.02)
+        g_lv = st.number_input("Please Input G Level (Unit: G)", min_value=0.1, value=30.0)
+        # duration = st.number_input("Please Input Duration (Unit: ms)", min_value=0.1, value=5.0)
+        del_t = st.number_input("Please Input Delta T (Unit: ms)", min_value=0.01, value=0.2)
+        del_t = del_t/1000
 
         df_id_wv = pd.DataFrame()
-        time_series = np.arange(0, 1.2*duration, del_t)
-        freq = 1000/(2*duration)
-        df_id_wv["Time"] = time_series/1000
 
         if wave_type == "Half-Sine":
-       
+            if wave_para == "DeltaV & G":
+                # g_lv = (2 * np.pi * freq * del_v * 0.0254) / (9.81 * 2)  
+                duration = (del_v * 0.0254 * 2 * np.pi) / (2 * 2 * g_lv *9.81)
+                duration
+                
+            freq = 1/(2 * duration)
+            time_series = np.arange(0, 1.5*duration, del_t)
+            df_id_wv["Time"] = time_series
             df_id_wv["G"] = g_lv*np.sin(2 * np.pi * freq * df_id_wv["Time"])
-            df_id_wv.loc[df_id_wv["Time"] > duration/1000, "G"] = 0
-            # df_id_wv["Time"] = df_id_wv["Time"]/100
-        # time_series
-        
-        # df_id_wv
+            # df_id_wv
+            df_id_wv.loc[df_id_wv["Time"] > duration, "G"] = 0
 
-    st.markdown("--------")
+        if wave_type == "Square":
+            if wave_para == "DeltaV & G":
+                # del_v = g_lv * 9.81 * duration  
+                duration = (del_v * 0.0254) / (g_lv * 9.81)
+                # g_lv   
+            span = 2
+            time_series = np.arange(0, 1.5*duration, del_t)
+            df_id_wv["Time"] = time_series
+            df_id_wv["G"] = g_lv
+            df_id_wv.loc[df_id_wv["Time"] > duration+2*span*del_t, "G"] = 0
+            df_id_wv.loc[df_id_wv["Time"] < span*del_t, "G"] = 0
+            df_id_wv.loc[df_id_wv["Time"] > duration+span*del_t, "G"] = 0
+
 
     uploaded_csv = st.sidebar.file_uploader('#### 選擇您要上傳的 CSV 檔', type="csv")
     
@@ -84,23 +97,55 @@ def main():
         st.header('您所上傳的 csv 檔內容：')
 
     else:
-        if input_method == "Ideal Wave":
+        if input_method == "Ideal Wave Profile":
             st.header('Ideal Wave')
             df_accel = df_id_wv.copy()
         else:
             st.header('未上傳檔案，以下為 Demo：')
             uploaded_csv = "motorcycle-crash.csv"
             df_accel = pd.read_csv(uploaded_csv, encoding="utf-8")
-    
+
+    df_accel = df_accel.set_index(df_accel.columns[0])
 
 
+    filter_raw = st.checkbox("Filter Raw Data")
+    if filter_raw == True:
+        filter_type = st.selectbox("Select Filter Type:", 
+                             ["Low Pass", "Band Pass", "High Pass"]
+                             )
+        
+        if filter_type == "Low Pass":
+            cut_off = st.number_input('Cut-off Frequency (Hz)', min_value=1, value=100, step=1)
+            df_accel = endaq.calc.filters.butterworth(df_accel, low_cutoff=None, high_cutoff=cut_off)
+
+        elif filter_type == "High Pass":
+            cut_off = st.number_input('Cut-off Frequency (Hz)', min_value=1, value=10, step=1)
+            df_accel = endaq.calc.filters.butterworth(df_accel, low_cutoff=cut_off, high_cutoff=None)
+        
+        else:
+            low_cut_off = st.number_input('Low Cut-off Frequency (Hz)', min_value=1, value=10, step=1)
+            cut_off = st.number_input('High Cut-off Frequency (Hz)', min_value=low_cut_off, value=500, step=1)
+            df_accel = endaq.calc.filters.butterworth(df_accel, low_cutoff=low_cut_off, high_cutoff=cut_off)
+
+            
     df_accel
+    if input_method == "Ideal Wave Profile":
 
+        id_wv_fil = convert_df(df_id_wv)
+        id_wv_name = [wave_type, str(round(g_lv)), "G", str(round(duration*1000)), "ms", "_ideal_wv.csv"]
+        fil_file_name_csv = "-".join(id_wv_name)
+        # fil_file_name_csv = wave_type + g_lv + del_v + duration + "_ideal_wv.csv"
+
+        st.download_button(label='Download wave result as CSV',  
+                            data=id_wv_fil, 
+                            file_name=fil_file_name_csv,
+                            mime='text/csv'
+                            )
 
 
     date = str(dt.datetime.now()).split(" ")[0]
 
-    df_accel = df_accel.set_index(df_accel.columns[0])
+    
     # df_accel
 
     chl_list = df_accel.columns
@@ -137,6 +182,16 @@ def main():
 # fig_srs.update_yaxes(title_font_family="Arial")
 
     st.plotly_chart(fig_raw, use_container_width=True)
+
+    if filter_raw == True:
+        filter_fil = convert_df(df_accel)
+        filter_file_name_csv = filter_type + "_" + str(cut_off) + " Hz_filter.csv"
+
+        st.download_button(label='Download filter result as CSV',  
+                            data=filter_fil, 
+                            file_name=filter_file_name_csv,
+                            mime='text/csv'
+                            )
 
 
     if cal_srs == True:
