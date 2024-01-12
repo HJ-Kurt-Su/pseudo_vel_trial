@@ -70,7 +70,7 @@ def main():
                 duration
                 
             freq = 1/(2 * duration)
-            time_series = np.arange(0, 1.5*duration, del_t)
+            time_series = np.arange(0, 6000*duration, del_t)
             df_id_wv["Time"] = time_series
             df_id_wv["G"] = g_lv*np.sin(2 * np.pi * freq * df_id_wv["Time"])
             # df_id_wv
@@ -129,6 +129,8 @@ def main():
 
             
     df_accel
+    # aa = df_accel.describe()
+    # aa
     if input_method == "Ideal Wave Profile":
 
         id_wv_fil = convert_df(df_id_wv)
@@ -171,8 +173,18 @@ def main():
 
     cal_srs = st.checkbox("Calculate SRS", value=True)
     cal_pvss = st.checkbox("Calculate Pseduo Velocity")
+    cal_psd = st.checkbox("Calculate PSD")
 
+
+    color_sequence = ["#65BFA1", "#A4D6C1", "#D5EBE1", "#EBF5EC", "#00A0DF", "#81CDE4", "#BFD9E2"]
+    color_sequence = px.colors.qualitative.Pastel
+    template = "simple_white"
+
+
+    st.markdown("     ")
+    st.subheader("Raw Figure")
     fig_raw = px.line(df_accel, x=df_accel.index, y=sel_chl,
+                      color_discrete_sequence=color_sequence, template=template, 
                 # log_x=True, log_y=True,
                 labels={
                     "value": g_unit
@@ -193,8 +205,10 @@ def main():
                             mime='text/csv'
                             )
 
+    st.markdown("--------------------")
 
     if cal_srs == True:
+        st.subheader("SRS")
 
         f_step = st.slider('Frequency Step', 5, 200, value=50, step=5)
         f_min = st.number_input('Min. Frequency (Hz)', min_value=5, value=10, step=1)
@@ -204,7 +218,7 @@ def main():
 
         df_accel_srs = endaq.calc.shock.shock_spectrum(df_accel_chl, freqs=range(f_min,f_max, f_step), damp=damping, mode="srs")
 
-        st.subheader("SRS")
+        
         df_accel_srs = df_accel_srs.reset_index()
         # df_accel_psd = df_accel_psd.reset_index()
         # df_accel_vc = df_accel_vc.reset_index()
@@ -217,6 +231,7 @@ def main():
 
 
         fig_srs = px.line(df_accel_srs, x='frequency (Hz)', y=sel_chl,
+                          color_discrete_sequence=color_sequence, template=template, 
                         log_x=True, log_y=True,
                         labels={
                             "value": g_unit
@@ -255,33 +270,35 @@ def main():
     st.markdown("--------------------")
 
     if cal_pvss == True:
-
+        st.subheader("Pseudo Velocity")
         pv_unit = st.radio(
         "## **Select pseudo velocity unit:**",
         ["m/s", "inch/s"],
         # captions = ["Laugh out loud.", "Get the popcorn.", "Never stop learning."]
         )
 
-        st.subheader("Pseudo Velocity")
+        
 
         if g_unit == "G" and pv_unit == "m/s":
             # st.markdown("try this!!!")
-            df_accel_chl = df_accel_chl*9.81
+            df_accel_chl_pv = df_accel_chl*9.81
             # df_accel_chl
             
         elif g_unit == "G" and pv_unit == "inch/s":
-            df_accel_chl = df_accel_chl*9.81*39.37
+            df_accel_chl_pv = df_accel_chl*9.81*39.37
 
         elif g_unit == "inch/s^2" and pv_unit == "m/s":
-            df_accel_chl = df_accel_chl*0.0254
+            df_accel_chl_pv = df_accel_chl*0.0254
 
         elif g_unit == "m/s^2" and pv_unit == "inch/s":
-            df_accel_chl = df_accel_chl*39.37
+            df_accel_chl_pv = df_accel_chl*39.37
+        else:
+            df_accel_chl_pv = df_accel_chl
 
 
         
         # df_accel_pvss = endaq.calc.shock.shock_spectrum(df_accel_chl, freqs=2 ** np.arange(-10, 13, 0.25), damp=0.05, mode="pvss")
-        df_accel_pvss = endaq.calc.shock.shock_spectrum(df_accel_chl, damp=damping, mode="pvss")
+        df_accel_pvss = endaq.calc.shock.shock_spectrum(df_accel_chl_pv, damp=damping, mode="pvss")
 
 
         df_accel_pvss = df_accel_pvss.reset_index()
@@ -289,6 +306,7 @@ def main():
         # df_accel_pvss.columns[:-1]
 
         fig_pvss = px.line(df_accel_pvss, x='frequency (Hz)', y=sel_chl,
+                           color_discrete_sequence=color_sequence, template=template, 
                         log_x=True, log_y=True,
                         # range_x=[1, 1000], range_y=[1, 1000]
                         labels={
@@ -305,7 +323,7 @@ def main():
                             data=pvss_fil, 
                             file_name=fil_file_name_csv,
                             mime='text/csv',
-                            key="srs")
+                            key="pvss_csv")
         
         fig_pvss_name = date + "_pvss.html"
         # fig_html = fig_pair.write_html(fig_file_name)
@@ -315,11 +333,60 @@ def main():
                             data=pvss_html,
                             file_name=fig_pvss_name,
                             mime='text/html',
-                            key="pvss"
+                            key="pvss_fig"
+                            )
+    
+    
+    
+    if cal_psd == True:
+
+        st.markdown("---")
+        st.markdown("## Under Construnction")
+        st.subheader("PSD")
+        # df_accel_psd = endaq.calc.psd.to_octave(df_accel_chl, fstart=10)
+        df_accel_psd = endaq.calc.psd.welch(df_accel_chl, bin_width=1, scaling="parseval")
+
+
+        df_accel_psd = df_accel_psd.reset_index()
+        df_accel_psd
+        # df_accel_pvss.columns[:-1]
+
+        y_label = g_unit + "-square/Hz"
+
+        fig_psd = px.line(df_accel_psd, x='frequency (Hz)', y=sel_chl,
+                          color_discrete_sequence=color_sequence, template=template, 
+                        log_x=True, log_y=True,
+                        # range_x=[10, 1000], 
+                        # range_y=[1, 1000]
+                        labels={
+                            "value": y_label
+                        },
+                        )
+        
+        st.plotly_chart(fig_psd, use_container_width=True)
+        st.markdown("---")
+        
+        psd_fil = convert_df(df_accel_psd)
+        fil_file_name_csv = date + "_psd.csv"
+
+        st.download_button(label='Download psd result as CSV',  
+                            data=psd_fil, 
+                            file_name=fil_file_name_csv,
+                            mime='text/csv',
+                            key="psd_csv")
+        
+        fig_psd_name = date + "_psd.html"
+        # fig_html = fig_pair.write_html(fig_file_name)
+        psd_html = convert_fig(fig_psd)
+
+        st.download_button(label="Download PSD figure",
+                            data=psd_html,
+                            file_name=fig_psd_name,
+                            mime='text/html',
+                            key="psd_fig"
                             )
 
         
-
 
 
 

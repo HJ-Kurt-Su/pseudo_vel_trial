@@ -33,9 +33,12 @@ def main():
 
     phase = 2*np.pi*np.random.randn(N)
     FFT = magnitude * np.exp(1j*phase)
+    
+    IFFT = np.fft.ifft(FFT)
 
-    PSD
+    magnitude
     FFT
+    IFFT
 
     # fig = plt.figure()
 
