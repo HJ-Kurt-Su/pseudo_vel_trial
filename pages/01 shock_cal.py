@@ -344,6 +344,9 @@ def main():
         st.markdown("## Under Construnction")
         st.subheader("PSD")
         # df_accel_psd = endaq.calc.psd.to_octave(df_accel_chl, fstart=10)
+        df_rms = df_accel_chl.std()
+        df_rms
+
         df_accel_psd = endaq.calc.psd.welch(df_accel_chl, bin_width=1, scaling="parseval")
 
 
